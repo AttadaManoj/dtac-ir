@@ -1,148 +1,147 @@
-# DTAC-IR: Dynamic Trust Assessment & Control — Incident Response Platform
+# DTAC-IR — Dynamic Trust Assessment & Control, Incident Response
 
-> Real-time network intrusion detection with ML-powered threat classification, dynamic trust scoring, and automated incident response.
+A real-time network intrusion detection and response platform combining rule-based detection, a trained ML classifier, and a custom trust-scoring engine — with a live SOC dashboard for visibility and response.
 
-[![Python](https://img.shields.io/badge/Python-3.11-blue)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.111-green)](https://fastapi.tiangolo.com)
-[![React](https://img.shields.io/badge/React-18-61dafb)](https://react.dev)
-[![License](https://img.shields.io/badge/License-MIT-yellow)](LICENSE)
+Built to be architecturally comparable to open-source SOC tooling (Wazuh, Suricata), scoped as a portfolio project demonstrating end-to-end security engineering: packet capture → feature extraction → hybrid detection → adaptive trust scoring → persistence → real-time visualization.
+
+![Dashboard screenshot — demo mode](docs/screenshot-dashboard.png)
 
 ---
 
-## Architecture Overview
+## Why this project exists
+
+Most student IDS projects stop at "classify a packet as malicious or not." DTAC-IR asks a different question: **how much should we trust a given device right now, based on its behavior over time** — and what should the system automatically do about it?
+
+That's the job of the **Trust Scoring Engine**, the core differentiator of this project. Every device on the network starts fully trusted (100). Detected threats decay that score with severity-weighted penalties and exponential time decay, moving the device through four states:
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                          DTAC-IR Platform                        │
-├──────────────┬──────────────────┬──────────────────┬────────────┤
-│  Network     │  Detection       │  Trust Scoring   │  Automated │
-│  Capture     │  Engine          │  Engine          │  Response  │
-│  (Scapy)     │  Rules + ML      │  (Per-Device)    │  (Actions) │
-├──────────────┴──────────────────┴──────────────────┴────────────┤
-│                    FastAPI Backend + WebSocket                    │
-├──────────────────────────────┬──────────────────────────────────┤
-│       React Dashboard        │      PostgreSQL + Redis           │
-└──────────────────────────────┴──────────────────────────────────┘
+TRUSTED (70–100) → SUSPICIOUS (30–69) → QUARANTINED (10–29) → BLOCKED (0–9)
 ```
 
-## Features
+This gives a SOC analyst (or an automated response layer) a continuous signal instead of a binary alert — a device with five minor anomalies over a week looks very different from one with five in the last minute, and the scoring reflects that.
 
-**Phase 1 — Core Detection Engine**
-- Real-time packet capture via Scapy with simulation mode (no root required for dev)
-- Rule-based detection: Port Scan, SYN Flood, DNS Exfiltration, Brute Force, ARP Spoofing
-- Per-IP stateful tracking with rolling time windows
-- Feature extraction pipeline compatible with ML input format
+---
 
-**Phase 2 — ML + Trust Scoring**
-- Random Forest classifier trained on CICIDS2017 dataset
-- Dynamic Trust Score (0–100) per device with exponential temporal decay
-- Score deductions weighted by severity × attack type × ML confidence
-- Analyst override support with audit trail
+## Architecture
 
-**Phase 3 — Dashboard + Automation**
-- React dashboard with real-time WebSocket updates
-- Alert management with acknowledge/resolve/false-positive workflow
-- Automated IP blocking and quarantine via iptables (opt-in)
-- Slack/email alerting integration
+```
+┌─────────────┐     ┌──────────────────┐     ┌───────────────────┐
+│   Scapy     │────▶│  Detection Engine │────▶│  Trust Scorer      │
+│ (live pkts) │     │  Rules + ML       │     │  (severity decay)  │
+└─────────────┘     └──────────────────┘     └───────────────────┘
+                              │                         │
+                              ▼                         ▼
+                     ┌─────────────────┐      ┌──────────────────┐
+                     │   PostgreSQL     │◀────▶│   FastAPI REST    │
+                     │ (devices/alerts) │      │   + WebSocket     │
+                     └─────────────────┘      └──────────────────┘
+                                                        │
+                                                        ▼
+                                            ┌────────────────────────┐
+                                            │  React SOC Dashboard    │
+                                            │  (hex trust grid, live  │
+                                            │   alerts, timeline)     │
+                                            └────────────────────────┘
+```
 
-## Tech Stack
+**Detection is hybrid, not purely ML:** rules run first (fast, near-zero false-positive for known signatures like port scans and SYN floods); if no rule fires, the ML classifier evaluates the flow. This keeps latency low for well-understood attacks while still catching novel patterns the rules don't cover.
 
-| Layer | Technology |
-|-------|-----------|
-| Packet Capture | Scapy 2.5 |
-| ML | scikit-learn (Random Forest) |
-| Backend | FastAPI + SQLAlchemy (async) |
-| Database | PostgreSQL 16 |
-| Cache/Queue | Redis 7 |
-| Frontend | React 18 + TypeScript |
-| Deployment | Docker + Docker Compose |
+---
 
-## Quick Start
+## Tech stack
+
+**Backend**
+- FastAPI (async), SQLAlchemy 2.0 (async), PostgreSQL, Redis
+- Scapy for live packet capture
+- scikit-learn Random Forest classifier, trained on a CICIDS2017-derived synthetic dataset (SMOTE-balanced across 6 classes)
+- WebSocket streaming for real-time dashboard updates
+
+**Frontend**
+- React 18 + Vite 5, Tailwind CSS, Zustand for state
+- Recharts for the live threat timeline
+- Custom SVG-based hexagonal device trust grid (no charting library — built to match a distinct SOC aesthetic rather than a generic dashboard template)
+- Built-in offline demo/simulation mode for portfolio demos without live network access
+
+**Infra**
+- Docker Compose for Postgres/Redis (and optional full containerized deployment)
+- Designed for WSL2/Linux where raw packet capture requires root + `NET_ADMIN`/`NET_RAW`
+
+---
+
+## Running it locally
 
 ### Prerequisites
-- WSL2 (Ubuntu 22.04+) or native Linux
-- Python 3.11+, Node.js 20+, Docker
-- Git
+- Python 3.10+, Node 18+, Docker
+- Linux/WSL2 (Scapy packet capture needs a real network interface and root privileges — this won't fully work in a sandboxed/VM environment without a bridged interface)
 
-### Setup
-
+### 1. Start Postgres + Redis
 ```bash
-git clone https://github.com/YOUR_USERNAME/dtac-ir.git
-cd dtac-ir
-chmod +x scripts/setup.sh
-./scripts/setup.sh
+cd docker
+docker compose up -d postgres redis
 ```
 
-### Run (Development)
-
+### 2. Backend
 ```bash
-# Terminal 1: Start database
-make db-up
-
-# Terminal 2: Start backend (simulation mode — no root needed)
-make dev-backend
-
-# Terminal 3: Start frontend
-make dev-frontend
+cd backend
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env   # then edit SECRET_KEY and CAPTURE_INTERFACE (check with `ip a`)
+sudo venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
+Root privileges are required for Scapy's raw socket access to capture live traffic.
 
-Open http://localhost:3000 for the dashboard, http://localhost:8000/api/docs for the API.
-
-### Run (Docker — full stack)
-
+### 3. Frontend
 ```bash
-make docker-up
+cd frontend
+npm install
+npm run dev
 ```
+Open `http://localhost:5173`. It checks the backend's `/health` endpoint on load — if unreachable, it automatically falls back to **demo mode**, which simulates realistic device/alert activity so the dashboard is always demoable, even offline.
 
-## Detection Rules
-
-| Rule | Trigger | Severity |
-|------|---------|----------|
-| Port Scan | >20 unique dst ports in 60s | MEDIUM |
-| SYN Flood | >100 SYN packets, >85% SYN ratio | CRITICAL |
-| DNS Exfiltration | >200 byte DNS payload or >50 queries/min | HIGH |
-| Brute Force | >10 connections to auth ports (22,23,3389) in 60s | HIGH |
-| ARP Spoofing | IP-MAC binding change detected | HIGH |
-
-## Trust Scoring
-
-Trust scores range 0–100 per device:
-
-| Score Range | Status | Action |
-|-------------|--------|--------|
-| 70–100 | Trusted | Monitor |
-| 30–69 | Suspicious | Alert analyst |
-| 10–29 | Quarantined | Restrict traffic |
-| 0–9 | Blocked | Auto-block |
-
-Scores recover over time via exponential decay — a port scan doesn't permanently blacklist a device.
-
-## Project Structure
-
-```
-dtac-ir/
-├── backend/          # FastAPI + detection engine
-│   └── app/
-│       ├── detection/    # Scapy capture + rules
-│       ├── ml/           # Model inference
-│       ├── trust/        # Trust scoring engine
-│       ├── response/     # Automated actions
-│       └── api/          # REST + WebSocket endpoints
-├── frontend/         # React dashboard
-├── ml/               # Notebooks + trained models
-├── docker/           # Compose files
-├── docs/             # Architecture + threat model
-└── scripts/          # Setup + utilities
-```
-
-## Dataset
-
-ML model trained on [CICIDS2017](https://www.unb.ca/cic/datasets/ids-2017.html) — the industry-standard IDS benchmark dataset from the Canadian Institute for Cybersecurity.
-
-## License
-
-MIT — see [LICENSE](LICENSE)
+### 4. API docs
+FastAPI's interactive Swagger UI is available at `http://localhost:8000/api/docs`.
 
 ---
 
-*Built as part of a cybersecurity engineering portfolio. Not intended for production deployment without security review.*
+## Real detection in action
+
+The screenshot at the top is demo mode — simulated traffic for offline portfolio demos. Here's the same dashboard running against **live network traffic**, where a handful of external IPs persistently port-scanned the host over several hours. The trust engine correctly crashed their scores toward zero and moved them to `QUARANTINED`/`BLOCKED`. This isn't a permanent blacklist, though — scores recover exponentially toward baseline (100) once a device stops misbehaving, so a device that goes quiet gets a path back to trusted status rather than staying flagged forever.
+
+![Dashboard screenshot — real detection](docs/screenshot-real-detection.png)
+
+---
+
+## Key design decisions
+
+- **Rules-first, ML-fallback** rather than ML-only: keeps common attacks fast and explainable, reserves the model for what rules can't catch.
+- **Trust score as a continuous signal, not a binary alert**: reflects how real SOC triage works — context and pattern over time matter more than any single event.
+- **Multicast/broadcast traffic explicitly filtered** before detection: mDNS (`224.0.0.251:5353`), SSDP, and limited broadcast (`255.255.255.255`) are normal local-network chatter that a naive classifier easily misreads as scanning behavior. Filtering this out at the source keeps the signal-to-noise ratio honest rather than inflating the threat count with harmless traffic.
+- **WebSocket push for alerts, not just polling**: new detections broadcast to connected dashboards immediately rather than waiting for the next poll interval.
+
+---
+
+## Known limitations
+
+Being upfront about these — they're the actual interesting parts to discuss in an interview:
+
+- **ML/rule taxonomy mismatch**: the Phase 1 rule engine and Phase 2 ML classifier were developed against slightly different attack taxonomies (rules: `PORT_SCAN`, `SYN_FLOOD`, `DNS_EXFILTRATION`, `BRUTE_FORCE`, `ARP_SPOOFING`; ML: `BENIGN`, `BOTNET`, `BRUTE_FORCE`, `DOS`, `PORT_SCAN`, `WEB_ATTACK`). The DB schema's `AttackType` enum has since been extended to cover both, but this is a good example of what happens when detection subsystems evolve independently — a real lesson in keeping shared taxonomies synchronized across a pipeline.
+- **In-memory trust scores**: the Trust Scoring Engine keeps live scores in memory for speed, with periodic sync to Postgres. A restart resets in-flight decay state (persisted history in the DB remains intact).
+- **Single-host packet capture**: currently observes traffic visible to the host it runs on. Extending to full network visibility would mean deploying as a span-port/mirror listener or multiple distributed sensors reporting to a central trust engine.
+- **No authentication on the API/dashboard yet**: fine for a local demo, would need JWT/session auth before any multi-user or internet-facing deployment.
+
+---
+
+## Project background
+
+Built as a deliberate elevation of a college coursework assignment into a portfolio-grade platform, developed in phases:
+- **Phase 1**: FastAPI backend, SQLAlchemy models, rule-based detection engine, trust scoring with exponential decay, Docker Compose, WebSocket endpoints
+- **Phase 2**: Full ML training pipeline — CICIDS2017 data loader, SMOTE balancing, Random Forest classifier, hybrid detection architecture
+- **Phase 3**: React SOC dashboard — hexagonal trust grid, live threat timeline, terminal-style alert feed, offline demo mode
+
+---
+
+## Author
+
+Attada Manoj — B.Tech Cybersecurity, CMR College of Engineering and Technology, Hyderabad
+CEH v13 | Cisco CCNA | Cisco Junior Cybersecurity Analyst Career Path
