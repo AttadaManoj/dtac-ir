@@ -1,0 +1,141 @@
+{
+  "model_type": "RandomForestClassifier",
+  "feature_names": [
+    "Flow Duration",
+    "Total Fwd Packets",
+    "Total Backward Packets",
+    "Total Length of Fwd Packets",
+    "Total Length of Bwd Packets",
+    "Fwd Packet Length Max",
+    "Fwd Packet Length Mean",
+    "Bwd Packet Length Max",
+    "Bwd Packet Length Mean",
+    "Flow Bytes/s",
+    "Flow Packets/s",
+    "Flow IAT Mean",
+    "Flow IAT Std",
+    "Fwd IAT Total",
+    "Bwd IAT Total",
+    "Fwd PSH Flags",
+    "SYN Flag Count",
+    "RST Flag Count",
+    "ACK Flag Count",
+    "Destination Port"
+  ],
+  "class_names": [
+    "BENIGN",
+    "BOTNET",
+    "BRUTE_FORCE",
+    "DOS",
+    "PORT_SCAN",
+    "WEB_ATTACK"
+  ],
+  "n_estimators": 100,
+  "max_depth": 20,
+  "training_time_s": 11.162873983383179,
+  "mode": "fast",
+  "accuracy": 1.0,
+  "f1_weighted": 1.0,
+  "f1_macro": 1.0,
+  "confusion_matrix": [
+    [
+      4200,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      180,
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      180,
+      0,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      720,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      600,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0,
+      0,
+      120
+    ]
+  ],
+  "per_class": {
+    "BENIGN": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 4200.0
+    },
+    "BOTNET": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 180.0
+    },
+    "BRUTE_FORCE": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 180.0
+    },
+    "DOS": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 720.0
+    },
+    "PORT_SCAN": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 600.0
+    },
+    "WEB_ATTACK": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 120.0
+    },
+    "accuracy": 1.0,
+    "macro avg": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 6000.0
+    },
+    "weighted avg": {
+      "precision": 1.0,
+      "recall": 1.0,
+      "f1-score": 1.0,
+      "support": 6000.0
+    }
+  }
+}

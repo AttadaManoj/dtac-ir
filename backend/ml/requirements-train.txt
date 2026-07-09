@@ -1,0 +1,24 @@
+# ── ML Training Requirements ─────────────────────────────────────────────────
+# Install SEPARATELY when training models (not needed at runtime).
+# Usage: pip install -r ml/requirements-train.txt
+#
+# Run from project root inside your venv:
+#   pip install -r ml/requirements-train.txt
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Pinned to match sklearn-compat constraint from imbalanced-learn
+scikit-learn==1.7.2
+numpy==2.4.6
+pandas==3.0.3
+joblib==1.5.3
+
+# Class imbalance handling (CICIDS2017 dataset is heavily imbalanced)
+imbalanced-learn==0.14.1
+
+# Notebook environment
+jupyter==1.1.1
+matplotlib==3.10.3
+seaborn==0.13.2
+
+# Dataset download helper
+requests==2.32.4
