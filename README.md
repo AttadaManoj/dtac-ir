@@ -1,13 +1,49 @@
-# DTAC-IR — Dynamic Trust Assessment & Control, Incident Response
+# DTAC-IR
 
-A real-time network intrusion detection and response platform combining rule-based detection, a trained ML classifier, and a custom trust-scoring engine — with a live SOC dashboard for visibility and response.
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=for-the-badge&logo=fastapi)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
+![Scapy](https://img.shields.io/badge/Scapy-Gainsboro?style=for-the-badge)
+![Machine Learning](https://img.shields.io/badge/Machine%20Learning-Orange?style=for-the-badge)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-Active%20Development-green?style=for-the-badge)
 
-Built to be architecturally comparable to open-source SOC tooling (Wazuh, Suricata), scoped as a portfolio project demonstrating end-to-end security engineering: packet capture → feature extraction → hybrid detection → adaptive trust scoring → persistence → real-time visualization.
 
-![Dashboard screenshot — demo mode](docs/screenshot-dashboard.png)
+
+> AI-Powered Intrusion Detection & Incident Response Platform
+
+Monitor live network traffic, identify suspicious behavior using machine learning and rule-based analysis, calculate trust scores, and visualize incidents through a modern security dashboard.
+
 
 ---
+## 📑 Table of Contents
 
+- [Overview](#dtac-ir)
+- [Demo Video](#demo-video)
+- [Screenshots](#screenshots)
+- [Why This Project Exists](#why-this-project-exists)
+- [Architecture](#architecture)
+- [Technology Stack](#technology-stack)
+- [Installation & Setup](#installation--setup)
+- [Detection Pipeline](#detection-pipeline)
+- [Design Decisions](#design-decisions)
+- [What I Learned](#what-i-learned)
+- [Known Limitations](#known-limitations)
+- [Roadmap](#roadmap)
+- [Author](#author)
+
+## Demo Video
+
+https://github.com/user-attachments/assets/2c1e1c5c-802b-4360-8234-203a4059cc31
+
+---
+## Screenshots
+![Dashboard screenshot — demo mode](docs/screenshot-dashboard.png)
+![Dashboard screenshot — real detection](docs/screenshot-real-detection.png)
+
+---
 ## Why this project exists
 
 Most student IDS projects stop at "classify a packet as malicious or not." DTAC-IR asks a different question: **how much should we trust a given device right now, based on its behavior over time** — and what should the system automatically do about it?
@@ -108,7 +144,6 @@ FastAPI's interactive Swagger UI is available at `http://localhost:8000/api/docs
 
 The screenshot at the top is demo mode — simulated traffic for offline portfolio demos. Here's the same dashboard running against **live network traffic**, where a handful of external IPs persistently port-scanned the host over several hours. The trust engine correctly crashed their scores toward zero and moved them to `QUARANTINED`/`BLOCKED`. This isn't a permanent blacklist, though — scores recover exponentially toward baseline (100) once a device stops misbehaving, so a device that goes quiet gets a path back to trusted status rather than staying flagged forever.
 
-![Dashboard screenshot — real detection](docs/screenshot-real-detection.png)
 
 ---
 
@@ -118,7 +153,26 @@ The screenshot at the top is demo mode — simulated traffic for offline portfol
 - **Trust score as a continuous signal, not a binary alert**: reflects how real SOC triage works — context and pattern over time matter more than any single event.
 - **Multicast/broadcast traffic explicitly filtered** before detection: mDNS (`224.0.0.251:5353`), SSDP, and limited broadcast (`255.255.255.255`) are normal local-network chatter that a naive classifier easily misreads as scanning behavior. Filtering this out at the source keeps the signal-to-noise ratio honest rather than inflating the threat count with harmless traffic.
 - **WebSocket push for alerts, not just polling**: new detections broadcast to connected dashboards immediately rather than waiting for the next poll interval.
+  
+---
+ ## What I Learned
 
+Building DTAC-IR reinforced several practical engineering concepts:
+
+- Designing hybrid detection systems that combine deterministic rules with machine learning.
+- Managing real-time communication using WebSockets.
+- Building asynchronous REST APIs with FastAPI.
+- Handling noisy network traffic before it reaches the detection engine.
+- Designing systems around engineering trade-offs rather than ideal assumptions.
+
+---
+## 🗺️ Roadmap
+
+- [ ] **Threat Intelligence Integration:** Automate IP reputation checks using external APIs (e.g., AlienVault OTX).
+- [ ] **Email Notifications:** Trigger automated alert summaries for high-risk IP transitions (e.g., when a device moves to BLOCKED).
+- [ ] **Role-Based Access Control (RBAC):** Restrict read/write operations on the security dashboard.
+- [ ] **Kubernetes Deployment:** Provide Helm charts for deploying the backend services and PostgreSQL securely on a cluster.
+- [ ] **Distributed Sensors:** Support lightweight agent deployment to mirror and forward traffic from remote networks.
 ---
 
 ## Known limitations
@@ -140,10 +194,6 @@ Built as a deliberate elevation of a college coursework assignment into a portfo
 - **Phase 3**: React SOC dashboard — hexagonal trust grid, live threat timeline, terminal-style alert feed, offline demo mode
 
 ---
-
-## Demo Video
-
-https://github.com/user-attachments/assets/2c1e1c5c-802b-4360-8234-203a4059cc31
 
 
 
